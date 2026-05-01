@@ -1,21 +1,25 @@
 {
   "name": "@harbor/destination-hubspot",
   "version": "0.0.1",
-  "description": "HubSpot destination connector (Import API + Batch)",
+  "description": "HubSpot destination connector — Batch API + rate limiting",
   "type": "module",
-  "main":  "./dist/index.js",
+  "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": { "import": "./dist/index.js", "types": "./dist/index.d.ts" }
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
+    "test":  "vitest run",
     "clean": "rm -rf dist *.tsbuildinfo"
   },
   "dependencies": {
     "@harbor/core": "workspace:*"
   },
   "peerDependencies": {
-    "effect": "^3.0.0"
+    "effect": ">=4.0.0-beta"
+  },
+  "devDependencies": {
+    "vitest": "^3.0.0"
   }
 }
