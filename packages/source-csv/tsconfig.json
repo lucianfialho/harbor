@@ -5,7 +5,7 @@
     "outDir":  "dist",
     "baseUrl": ".",
     "paths": {
-      "effect":   ["../../node_modules/effect/dist/index.d.ts"],
+      "effect":   ["../../node_modules/effect"],
       "effect/*": ["../../node_modules/effect/dist/*.d.ts"]
     }
   },

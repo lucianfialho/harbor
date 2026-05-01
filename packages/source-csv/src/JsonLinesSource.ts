@@ -3,19 +3,18 @@ import { Effect, Schema, Stream } from "effect"
 import { createReadStream } from "node:fs"
 import { createInterface } from "node:readline"
 import { CsvError } from "./errors.js"
+import { countNonEmptyLines, safePath } from "./utils.js"
 
-async function countLines(path: string): Promise<number> {
-  let count = 0
-  const rl = createInterface({ input: createReadStream(path), crlfDelay: Infinity })
-  for await (const _ of rl) count++
-  return count
-}
 
 async function* readLines(path: string): AsyncGenerator<string> {
-  const rl = createInterface({ input: createReadStream(path), crlfDelay: Infinity })
-  for await (const line of rl) {
-    const t = line.trim()
-    if (t.length > 0) yield t
+  const rl = createInterface({ input: createReadStream(safePath(path)), crlfDelay: Infinity })
+  try {
+    for await (const line of rl) {
+      const t = line.trim()
+      if (t.length > 0) yield t
+    }
+  } finally {
+    rl.close()
   }
 }
 
@@ -34,6 +33,8 @@ export function JsonLinesSource<A>(options: {
         const raw = JSON.parse(line) as unknown
         return decode(raw)
       } catch {
+        // Skip lines that fail JSON parsing or schema validation.
+        // Known limitation: Effect defects also swallowed here.
         return null
       }
     }),
@@ -41,7 +42,7 @@ export function JsonLinesSource<A>(options: {
   )
 
   const count = Effect.tryPromise({
-    try:   () => countLines(options.path),
+    try:   () => countNonEmptyLines(options.path),
     catch: (cause) => new CsvError({ cause, path: options.path }),
   })
 

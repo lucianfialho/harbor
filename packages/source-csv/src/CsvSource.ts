@@ -1,24 +1,15 @@
 import type { Source } from "@harbor/core"
 import { Effect, Schema, Stream } from "effect"
 import { createReadStream } from "node:fs"
-import { createInterface } from "node:readline"
 import { parse } from "csv-parse"
 import { CsvError } from "./errors.js"
+import { countNonEmptyLines, safePath } from "./utils.js"
 
-async function countLines(path: string): Promise<number> {
-  let count = 0
-  const rl = createInterface({ input: createReadStream(path), crlfDelay: Infinity })
-  for await (const _ of rl) count++
-  return Math.max(0, count - 1) // subtract header row
-}
 
 async function* parseCsv(path: string): AsyncGenerator<unknown> {
-  const stream = createReadStream(path)
+  const stream = createReadStream(safePath(path))
   const parser = stream.pipe(parse({ columns: true, bom: true, skip_empty_lines: true, trim: true }))
-
-  // Surface stream errors (e.g. ENOENT) through the async iterator
   stream.on("error", (err) => parser.destroy(err))
-
   for await (const row of parser) yield row
 }
 
@@ -33,13 +24,21 @@ export function CsvSource<A>(options: {
     (cause) => new CsvError({ cause, path: options.path })
   ).pipe(
     Stream.map((row) => {
-      try { return decode(row) } catch { return null }
+      try {
+        return decode(row)
+      } catch {
+        // Skip rows that fail schema validation.
+        // Known limitation: Effect defects are also swallowed here.
+        // A future version can use Schema.isSchemaError() when module deduplication is stable.
+        return null
+      }
     }),
     Stream.filter((v): v is A => v !== null)
   )
 
+  // countNonEmptyLines skips blank lines, then subtract 1 for header
   const count = Effect.tryPromise({
-    try:   () => countLines(options.path),
+    try:   () => countNonEmptyLines(options.path).then((n) => Math.max(0, n - 1)),
     catch: (cause) => new CsvError({ cause, path: options.path }),
   })
 

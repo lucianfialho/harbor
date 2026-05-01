@@ -47,8 +47,22 @@ describe("CsvSource", () => {
     expect(total).toBe(2)
   })
 
-  it("fails with CsvError when file does not exist", async () => {
+  it("fails with CsvError when file does not exist (count)", async () => {
     const source = CsvSource({ path: "/nonexistent/file.csv", schema: ContactSchema })
+    const exit = await Effect.runPromiseExit(source.count)
+    expect(exit._tag).toBe("Failure")
+  })
+
+  it("stream fails with CsvError when file does not exist", async () => {
+    const source = CsvSource({ path: "/nonexistent/file.csv", schema: ContactSchema })
+    const exit = await Effect.runPromiseExit(Stream.runCollect(source.stream))
+    expect(exit._tag).toBe("Failure")
+  })
+
+  it("path traversal is rejected", async () => {
+    expect(() => CsvSource({ path: "/tmp/../etc/passwd", schema: ContactSchema }))
+      .not.toThrow() // constructor is safe; error surfaces on stream/count access
+    const source = CsvSource({ path: "/tmp/../etc/passwd", schema: ContactSchema })
     const exit = await Effect.runPromiseExit(source.count)
     expect(exit._tag).toBe("Failure")
   })
