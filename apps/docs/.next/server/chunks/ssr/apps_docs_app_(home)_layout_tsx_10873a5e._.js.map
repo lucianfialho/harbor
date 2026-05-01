@@ -1,6 +1,0 @@
-{
-  "version": 3,
-  "sources": [],
-  "sections": [
-    {"offset": {"line": 4, "column": 0}, "map": {"version":3,"sources":["file:///Users/lucianfialho/Code/lucianfialho/harbor/apps/docs/app/%28home%29/layout.tsx"],"sourcesContent":["import type { ReactNode } from \"react\"\nimport { HomeLayout } from \"fumadocs-ui/layouts/home\"\n\nexport default function Layout({ children }: { children: ReactNode }) {\n  return (\n    <HomeLayout\n      nav={{ title: \"Harbor\" }}\n      links={[{ text: \"Documentation\", url: \"/docs\" }]}\n    >\n      {children}\n    </HomeLayout>\n  )\n}\n"],"names":[],"mappings":";;;;;AACA;;;AAEe,SAAS,OAAO,EAAE,QAAQ,EAA2B;IAClE,qBACE,8OAAC,gLAAU;QACT,KAAK;YAAE,OAAO;QAAS;QACvB,OAAO;YAAC;gBAAE,MAAM;gBAAiB,KAAK;YAAQ;SAAE;kBAE/C;;;;;;AAGP","debugId":null}}]
-}
