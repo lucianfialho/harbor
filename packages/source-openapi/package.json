@@ -1,0 +1,26 @@
+{
+  "name": "@harbor/source-openapi",
+  "version": "0.0.1",
+  "description": "Generic OpenAPI spec → Source connector (internalizes spec2cli parser)",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": { "import": "./dist/index.js", "types": "./dist/index.d.ts" }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test":  "vitest run",
+    "clean": "rm -rf dist *.tsbuildinfo"
+  },
+  "dependencies": {
+    "@harbor/core": "workspace:*",
+    "yaml": "^2.7.0"
+  },
+  "peerDependencies": {
+    "effect": ">=4.0.0-beta"
+  },
+  "devDependencies": {
+    "vitest": "^3.0.0"
+  }
+}
