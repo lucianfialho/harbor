@@ -100,8 +100,11 @@
         "@google-cloud/storage": "^7.0.0",
         "@harbor/core": "workspace:*",
       },
+      "devDependencies": {
+        "vitest": "^3.0.0",
+      },
       "peerDependencies": {
-        "effect": "^3.0.0",
+        "effect": ">=4.0.0-beta",
       },
     },
     "packages/stage-local": {

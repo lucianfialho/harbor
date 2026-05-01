@@ -1,22 +1,26 @@
 {
   "name": "@harbor/stage-gcs",
   "version": "0.0.1",
-  "description": "Google Cloud Storage staging layer (30M+ records)",
+  "description": "Google Cloud Storage staging layer — for 30M+ records",
   "type": "module",
-  "main":  "./dist/index.js",
+  "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": { "import": "./dist/index.js", "types": "./dist/index.d.ts" }
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
+    "test":  "vitest run",
     "clean": "rm -rf dist *.tsbuildinfo"
   },
   "dependencies": {
-    "@harbor/core": "workspace:*",
+    "@harbor/core":          "workspace:*",
     "@google-cloud/storage": "^7.0.0"
   },
   "peerDependencies": {
-    "effect": "^3.0.0"
+    "effect": ">=4.0.0-beta"
+  },
+  "devDependencies": {
+    "vitest": "^3.0.0"
   }
 }
