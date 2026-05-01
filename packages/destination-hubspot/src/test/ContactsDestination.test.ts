@@ -50,6 +50,32 @@ describe("ContactsDestination", () => {
     vi.unstubAllGlobals()
   })
 
+  it("retries on 429 and succeeds on second attempt", async () => {
+    let attempt = 0
+    vi.stubGlobal("fetch", async (_url: string, init?: RequestInit) => {
+      attempt++
+      if (attempt === 1) {
+        return new Response(JSON.stringify({}), {
+          status: 429,
+          headers: { "Content-Type": "application/json", "Retry-After": "0" },
+        })
+      }
+      const body = JSON.parse((init?.body as string) ?? "{}")
+      return new Response(
+        JSON.stringify({ results: body.inputs.map((_: unknown, i: number) => ({ id: `hs-${i}` })) }),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      )
+    })
+
+    const dest = ContactsDestination(config)
+    const result = await run(dest.write(Stream.fromIterable([contact(0)])))
+
+    expect(attempt).toBe(2)
+    expect(result.ok).toBe(1)
+    expect(result.errors).toBe(0)
+    vi.unstubAllGlobals()
+  }, 10_000)
+
   it("returns empty result for empty stream", async () => {
     vi.stubGlobal("fetch", vi.fn())
     const dest = ContactsDestination(config)

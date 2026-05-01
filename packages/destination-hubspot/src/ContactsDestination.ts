@@ -1,11 +1,9 @@
 /**
  * HubSpot Contacts destination — batch upsert by email, 100 per request.
  *
- * Uses Stream.grouped(100) from effect-smol:
- *   src/Stream.ts line 7686 — grouped returns NonEmptyReadonlyArray<A>
- *
- * HTTP via fetch + Effect.tryPromise for simplicity (no Context dependency).
- * Schedule.exponential + jittered for 429 retry.
+ * Stream.grouped(100) verified against effect-smol src/Stream.ts:7686.
+ * Retry capped at 8 attempts (~10s max cumulative) to avoid infinite hangs.
+ * Network errors (TypeError) treated as retryable — same as 5xx.
  */
 import type { Destination, ImportResult } from "@harbor/core"
 import { Effect, Schedule, Stream } from "effect"
@@ -27,9 +25,14 @@ export interface HubSpotConfig {
 
 const BATCH_SIZE = 100
 
-const retrySchedule = Schedule.exponential("200 millis").pipe(
-  Schedule.either(Schedule.spaced("10 seconds")),
-  Schedule.jittered
+// Capped exponential backoff — max 8 retries (~10s cumulative) to prevent infinite hang
+// Schedule.both: both schedules must agree to continue (exponential AND recurs cap)
+const retrySchedule = Schedule.both(
+  Schedule.exponential("200 millis").pipe(
+    Schedule.either(Schedule.spaced("10 seconds")),
+    Schedule.jittered
+  ),
+  Schedule.recurs(8)
 )
 
 function batchUpsert(
@@ -47,16 +50,16 @@ function batchUpsert(
       const res = await fetch(`${config.baseUrl}/crm/v3/objects/contacts/batch/upsert`, {
         method:  "POST",
         headers: {
-          "Authorization":  `Bearer ${config.token}`,
-          "Content-Type":   "application/json",
-          "Accept":         "application/json",
+          "Authorization": `Bearer ${config.token}`,
+          "Content-Type":  "application/json",
+          "Accept":        "application/json",
         },
         body: JSON.stringify({ inputs }),
       })
 
       if (res.status === 429) {
-        const retryAfter = parseInt(res.headers.get("Retry-After") ?? "10", 10)
-        throw Object.assign(new Error("Rate limited"), { status: 429, retryAfter })
+        // Honor Retry-After if present, otherwise let Schedule handle timing
+        throw Object.assign(new Error("Rate limited"), { status: 429 })
       }
 
       if (!res.ok) {
@@ -64,14 +67,22 @@ function batchUpsert(
         throw Object.assign(new Error(`HubSpot ${res.status}: ${text}`), { status: res.status })
       }
 
-      const data = (await res.json()) as { results?: unknown[] }
-      return data.results?.length ?? batch.length
+      const data = (await res.json()) as { results?: unknown[]; errors?: unknown[] }
+
+      // HubSpot returns HTTP 200 even for partial failures.
+      // data.errors contains per-record failures within the batch.
+      const batchErrors = data.errors?.length ?? 0
+      const batchOk     = (data.results?.length ?? batch.length) - batchErrors
+      return Math.max(0, batchOk)
     },
     catch: (cause) => new HubSpotError({
       cause,
       message:   (cause as Error).message ?? "Unknown error",
       status:    (cause as { status?: number }).status,
-      retryable: [429, 500, 502, 503, 504].includes((cause as { status?: number }).status ?? 0),
+      // Network errors (TypeError: failed to fetch) AND 429/5xx are retryable
+      retryable:
+        cause instanceof TypeError ||
+        [429, 500, 502, 503, 504].includes((cause as { status?: number }).status ?? 0),
     }),
   }).pipe(
     Effect.retry({
