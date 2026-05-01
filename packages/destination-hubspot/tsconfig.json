@@ -2,12 +2,9 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "rootDir": "src",
-    "outDir":  "dist",
-    "baseUrl": ".",
-    "paths": {
-      "effect":   ["../../node_modules/effect/dist/index.d.ts"],
-      "effect/*": ["../../node_modules/effect/dist/*.d.ts"]
-    }
+    "outDir": "dist"
   },
-  "include": ["src"]
+  "include": [
+    "src"
+  ]
 }

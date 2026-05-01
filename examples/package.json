@@ -1,0 +1,18 @@
+{
+  "name": "@harbor/examples",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "01": "bun run 01-csv-to-hubspot/run.ts",
+    "02": "bun run 02-large-volume/run.ts",
+    "04": "bun run 04-custom-transform/run.ts"
+  },
+  "dependencies": {
+    "@harbor/core":                 "workspace:*",
+    "@harbor/source-csv":           "workspace:*",
+    "@harbor/stage-local":          "workspace:*",
+    "@harbor/destination-hubspot":  "workspace:*",
+    "effect":                       "4.0.0-beta.59"
+  }
+}

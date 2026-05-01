@@ -1,0 +1,15 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "effect":   ["../node_modules/effect/dist/index.js"],
+      "effect/*": ["../node_modules/effect/dist/*.js"],
+      "@harbor/core":                ["../packages/core/src/index.ts"],
+      "@harbor/source-csv":          ["../packages/source-csv/src/index.ts"],
+      "@harbor/stage-local":         ["../packages/stage-local/src/index.ts"],
+      "@harbor/destination-hubspot": ["../packages/destination-hubspot/src/index.ts"]
+    }
+  },
+  "include": ["**/*.ts"]
+}

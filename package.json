@@ -1,7 +1,8 @@
 {
   "name": "harbor",
   "private": true,
-  "workspaces": ["packages/*"],
+  "workspaces": ["packages/*", "examples"],
+  "packageManager": "bun@1.2.21",
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev --parallel",
