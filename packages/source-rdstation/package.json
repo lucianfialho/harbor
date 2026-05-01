@@ -1,22 +1,17 @@
 {
   "name": "@harbor/source-rdstation",
   "version": "0.0.1",
-  "description": "RD Station source connector (CSV-based)",
+  "description": "RD Station source — CSV-based (export) or API via source-openapi",
   "type": "module",
-  "main":  "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "main": "./src/index.ts",
   "exports": {
-    ".": { "import": "./dist/index.js", "types": "./dist/index.d.ts" }
-  },
-  "scripts": {
-    "build": "tsc -p tsconfig.json",
-    "clean": "rm -rf dist *.tsbuildinfo"
+    ".": { "bun": "./src/index.ts", "import": "./src/index.ts" }
   },
   "dependencies": {
-    "@harbor/core": "workspace:*",
-    "@harbor/source-csv": "workspace:*"
+    "@harbor/source-csv":     "workspace:*",
+    "@harbor/source-openapi": "workspace:*"
   },
   "peerDependencies": {
-    "effect": "^3.0.0"
+    "effect": ">=4.0.0-beta"
   }
 }

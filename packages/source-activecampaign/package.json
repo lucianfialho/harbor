@@ -1,21 +1,16 @@
 {
   "name": "@harbor/source-activecampaign",
   "version": "0.0.1",
-  "description": "ActiveCampaign paginated source connector",
+  "description": "ActiveCampaign source — thin wrapper over @harbor/source-openapi",
   "type": "module",
-  "main":  "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "main": "./src/index.ts",
   "exports": {
-    ".": { "import": "./dist/index.js", "types": "./dist/index.d.ts" }
-  },
-  "scripts": {
-    "build": "tsc -p tsconfig.json",
-    "clean": "rm -rf dist *.tsbuildinfo"
+    ".": { "bun": "./src/index.ts", "import": "./src/index.ts" }
   },
   "dependencies": {
-    "@harbor/core": "workspace:*"
+    "@harbor/source-openapi": "workspace:*"
   },
   "peerDependencies": {
-    "effect": "^3.0.0"
+    "effect": ">=4.0.0-beta"
   }
 }

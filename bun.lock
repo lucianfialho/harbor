@@ -47,10 +47,10 @@
       "name": "@harbor/source-activecampaign",
       "version": "0.0.1",
       "dependencies": {
-        "@harbor/core": "workspace:*",
+        "@harbor/source-openapi": "workspace:*",
       },
       "peerDependencies": {
-        "effect": "^3.0.0",
+        "effect": ">=4.0.0-beta",
       },
     },
     "packages/source-csv": {
@@ -86,11 +86,11 @@
       "name": "@harbor/source-rdstation",
       "version": "0.0.1",
       "dependencies": {
-        "@harbor/core": "workspace:*",
         "@harbor/source-csv": "workspace:*",
+        "@harbor/source-openapi": "workspace:*",
       },
       "peerDependencies": {
-        "effect": "^3.0.0",
+        "effect": ">=4.0.0-beta",
       },
     },
     "packages/stage-gcs": {
