@@ -4,13 +4,16 @@
   "workspaces": ["packages/*"],
   "scripts": {
     "build": "turbo run build",
-    "dev":   "turbo run dev --parallel",
-    "test":  "turbo run test",
-    "lint":  "turbo run lint",
+    "dev": "turbo run dev --parallel",
+    "test": "turbo run test",
+    "lint": "turbo run lint",
     "clean": "turbo run clean"
   },
+  "dependencies": {
+    "effect": "4.0.0-beta.59"
+  },
   "devDependencies": {
-    "turbo":      "latest",
+    "turbo": "latest",
     "typescript": "^5.7.0",
     "@types/node": "^22.0.0"
   }

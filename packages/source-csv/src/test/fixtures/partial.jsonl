@@ -1,0 +1,4 @@
+{"email":"valid@example.com","name":"Valid"}
+not json at all
+{"bad":true}
+{"email":"another@example.com","name":"Another"}
