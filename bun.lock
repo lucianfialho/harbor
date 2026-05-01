@@ -68,6 +68,20 @@
         "effect": "4.0.0-beta.59",
       },
     },
+    "packages/source-openapi": {
+      "name": "@harbor/source-openapi",
+      "version": "0.0.1",
+      "dependencies": {
+        "@harbor/core": "workspace:*",
+        "yaml": "^2.7.0",
+      },
+      "devDependencies": {
+        "vitest": "^3.0.0",
+      },
+      "peerDependencies": {
+        "effect": ">=4.0.0-beta",
+      },
+    },
     "packages/source-rdstation": {
       "name": "@harbor/source-rdstation",
       "version": "0.0.1",
@@ -186,6 +200,8 @@
     "@harbor/source-activecampaign": ["@harbor/source-activecampaign@workspace:packages/source-activecampaign"],
 
     "@harbor/source-csv": ["@harbor/source-csv@workspace:packages/source-csv"],
+
+    "@harbor/source-openapi": ["@harbor/source-openapi@workspace:packages/source-openapi"],
 
     "@harbor/source-rdstation": ["@harbor/source-rdstation@workspace:packages/source-rdstation"],
 

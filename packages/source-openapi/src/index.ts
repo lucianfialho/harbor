@@ -1,0 +1,7 @@
+export { OpenApiSource, type OpenApiSourceConfig, type OpenApiSourceResult } from "./OpenApiSource.js"
+export { OpenApiError } from "./errors.js"
+export { loadSpec } from "./parser/loader.js"
+export { extractListOperations, extractFields } from "./parser/extractor.js"
+export { detectPagination, type PaginationStrategy, type PaginationConfig } from "./pagination/detector.js"
+export type { AuthConfig, AuthType } from "./http/auth.js"
+export type { FieldInfo, OpenAPISpec } from "./parser/types.js"
