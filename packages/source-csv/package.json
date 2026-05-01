@@ -1,0 +1,22 @@
+{
+  "name": "@harbor/source-csv",
+  "version": "0.0.1",
+  "description": "CSV and JSONL source connector",
+  "type": "module",
+  "main":  "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": { "import": "./dist/index.js", "types": "./dist/index.d.ts" }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "clean": "rm -rf dist *.tsbuildinfo"
+  },
+  "dependencies": {
+    "@harbor/core": "workspace:*",
+    "csv-parse": "^5.6.0"
+  },
+  "peerDependencies": {
+    "effect": "^3.0.0"
+  }
+}
