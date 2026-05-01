@@ -33,6 +33,7 @@ const program = Effect.gen(function*() {
 
   // Streams line-by-line — 30M records, no memory issues
   return yield* dest.write(source.stream.pipe(Stream.map(transform)))
+
 })
 
 Effect.runPromise(Effect.orDie(program))
@@ -40,6 +41,30 @@ Effect.runPromise(Effect.orDie(program))
 ```
 
 That's the whole pipeline. Records flow through `transform` and into `dest.write` one batch at a time — never all in memory at once.
+
+### Testing without filesystem or HTTP
+
+Every source and destination accepts an optional injectable capability:
+
+```typescript
+import { fakeCsvFiles }        from "@harbor/source-csv"
+import { fakeHubSpotContacts } from "@harbor/destination-hubspot"
+
+it("migrates contacts", async () => {
+  const source = CsvSource({
+    path:   "ignored.csv",
+    schema: ContactSchema,
+    files:  fakeCsvFiles([{ email: "a@b.com", name: "Ana" }]),  // ← no disk I/O
+  })
+  const dest = ContactsDestination(
+    { token: "ignored", baseUrl: "ignored" },
+    fakeHubSpotContacts()  // ← no HTTP calls
+  )
+
+  const result = await Effect.runPromise(dest.write(source.stream.pipe(Stream.map(transform))))
+  expect(result.ok).toBe(1)
+})
+```
 
 ---
 
