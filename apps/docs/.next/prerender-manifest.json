@@ -1,11 +1,1 @@
-{
-  "version": 4,
-  "routes": {},
-  "dynamicRoutes": {},
-  "notFoundRoutes": [],
-  "preview": {
-    "previewModeId": "70f66d27964aad8c7431332bb89ff546",
-    "previewModeSigningKey": "04af7c25e2c0ac013be553c61db6bff4e16466b72283a3555fcb871c8f09f2cb",
-    "previewModeEncryptionKey": "0b994344a03e831acd390c2cca2d8f7c8fd9294847cbf197bb0de9892f3359cf"
-  }
-}
+{"version":4,"routes":{"/docs/getting-started":{},"/docs":{},"/docs/concepts/destination":{},"/docs/concepts/source":{},"/docs/concepts/stage":{},"/docs/guides/large-volume":{},"/docs/guides/new-connector":{},"/docs/guides/testing":{},"/docs/packages/destination-hubspot":{},"/docs/packages/source-csv":{},"/docs/packages/source-openapi":{},"/docs/packages/stage-gcs":{},"/docs/packages/stage-local":{}},"dynamicRoutes":{"/docs/[[...slug]]":{"dataRoute":null,"dataRouteRegex":null,"fallback":null,"fallbackRevalidate":false,"fallbackSourceRoute":"/docs/[[...slug]]","routeRegex":"^\\/docs(?:\\/(.+?))?(?:\\/)?$","allowHeader":[]}},"notFoundRoutes":[],"preview":{"previewModeId":"508450c97643e4fd84a69e8a4f687fd6","previewModeSigningKey":"613795202a06e3d976816a9882888778bcedb8c3637c9b2facdbd7e51dcb5c1b","previewModeEncryptionKey":"c5fc6baa92b4af72ffc5ee8e5ba17a319e08144f5051840f649195309d3a841c"}}

@@ -1,8 +1,13 @@
 import { docs } from "@/.source"
 import { loader } from "fumadocs-core/source"
-import { createMDXSource } from "fumadocs-mdx"
+
+const mdxSource = docs.toFumadocsSource()
 
 export const source = loader({
-  baseUrl:  "/docs",
-  source:   createMDXSource(docs),
+  baseUrl: "/docs",
+  source: {
+    files: typeof mdxSource.files === "function"
+      ? (mdxSource.files as () => unknown[])()
+      : (mdxSource.files as unknown[]),
+  },
 })
