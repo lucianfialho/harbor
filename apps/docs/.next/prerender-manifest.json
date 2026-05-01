@@ -1,1 +1,11 @@
-{"version":4,"routes":{"/docs/getting-started":{},"/docs":{},"/docs/concepts/destination":{},"/docs/concepts/source":{},"/docs/concepts/stage":{},"/docs/guides/large-volume":{},"/docs/guides/new-connector":{},"/docs/guides/testing":{},"/docs/packages/destination-hubspot":{},"/docs/packages/source-csv":{},"/docs/packages/source-openapi":{},"/docs/packages/stage-gcs":{},"/docs/packages/stage-local":{}},"dynamicRoutes":{"/docs/[[...slug]]":{"dataRoute":null,"dataRouteRegex":null,"fallback":null,"fallbackRevalidate":false,"fallbackSourceRoute":"/docs/[[...slug]]","routeRegex":"^\\/docs(?:\\/(.+?))?(?:\\/)?$","allowHeader":[]}},"notFoundRoutes":[],"preview":{"previewModeId":"508450c97643e4fd84a69e8a4f687fd6","previewModeSigningKey":"613795202a06e3d976816a9882888778bcedb8c3637c9b2facdbd7e51dcb5c1b","previewModeEncryptionKey":"c5fc6baa92b4af72ffc5ee8e5ba17a319e08144f5051840f649195309d3a841c"}}
+{
+  "version": 4,
+  "routes": {},
+  "dynamicRoutes": {},
+  "notFoundRoutes": [],
+  "preview": {
+    "previewModeId": "8122da48ff1eaa7d9194e8ecc731c599",
+    "previewModeSigningKey": "24444350bb7bbc86df84950ff1dba87d4fe895cd63af0015d06890885c58acba",
+    "previewModeEncryptionKey": "ae4763bc8438c633ca87773f76574106c4d50d65f684f7fd96d57690c1adb7cb"
+  }
+}
