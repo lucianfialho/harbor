@@ -1,0 +1,4 @@
+email,name,age
+valid@example.com,Valid,25
+not-an-email,Bad,notanumber
+another@example.com,Another,30

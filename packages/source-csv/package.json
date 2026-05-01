@@ -1,15 +1,16 @@
 {
   "name": "@harbor/source-csv",
   "version": "0.0.1",
-  "description": "CSV and JSONL source connector",
+  "description": "CSV and JSONL source connector — streaming, schema-validated",
   "type": "module",
-  "main":  "./dist/index.js",
+  "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": { "import": "./dist/index.js", "types": "./dist/index.d.ts" }
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
+    "test":  "vitest run",
     "clean": "rm -rf dist *.tsbuildinfo"
   },
   "dependencies": {
@@ -17,6 +18,10 @@
     "csv-parse": "^5.6.0"
   },
   "peerDependencies": {
-    "effect": "^3.0.0"
+    "effect": ">=4.0.0-beta"
+  },
+  "devDependencies": {
+    "vitest": "^3.0.0",
+    "@vitest/coverage-v8": "^3.0.0"
   }
 }
