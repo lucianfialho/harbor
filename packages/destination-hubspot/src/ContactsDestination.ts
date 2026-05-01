@@ -3,6 +3,7 @@
  *
  * Stream.grouped(100) verified against effect-smol src/Stream.ts:7686.
  * Injectable HubSpotContactsImpl for testability (issue #17).
+ * Uses Effect.fn for top-level tracing span.
  */
 import type { Destination, ImportResult } from "@harbor/core"
 import { Effect, Stream } from "effect"
@@ -27,13 +28,13 @@ const BATCH_SIZE = 100
 
 export function ContactsDestination(
   config: HubSpotConfig,
-  /** Injectable HTTP capability — defaults to live fetch implementation */
   contacts?: HubSpotContactsImpl
 ): Destination<HubSpotContact, HubSpotError> {
   const client = contacts ?? HubSpotContactsLive(config)
 
-  const write = (stream: Stream.Stream<HubSpotContact, HubSpotError>) =>
-    Effect.gen(function*() {
+  // Effect.fn wraps the entire write — top-level span visible in traces
+  const write = Effect.fn("harbor/ContactsDestination.write")(
+    function*(stream: Stream.Stream<HubSpotContact, HubSpotError>) {
       let ok = 0, errors = 0
 
       yield* stream.pipe(
@@ -49,7 +50,8 @@ export function ContactsDestination(
       )
 
       return { ok, errors, skipped: 0 } satisfies ImportResult
-    })
+    }
+  )
 
   return { write }
 }

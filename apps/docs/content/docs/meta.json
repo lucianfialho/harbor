@@ -11,6 +11,7 @@
     "guides/testing",
     "guides/large-volume",
     "guides/new-connector",
+    "guides/observability",
     "---Packages---",
     "packages/source-csv",
     "packages/source-openapi",

@@ -1,4 +1,4 @@
 {
-  "/llms-full.txt/route": "app/llms-full.txt/route.js",
-  "/llms.txt/route": "app/llms.txt/route.js"
+  "/(home)/page": "app/(home)/page.js",
+  "/docs/[[...slug]]/page": "app/docs/[[...slug]]/page.js"
 }

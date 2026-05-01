@@ -1,9 +1,6 @@
 /**
  * HubSpotContacts — injectable HTTP capability for HubSpot batch upsert.
- * Pattern: optional parameter injection (same as CsvFilesImpl in source-csv).
- *
- * Production:  HubSpotContactsLive(config) — uses real fetch
- * Tests:       fakeHubSpotContacts({ ok: N }) or fakeHubSpotContacts({ fail: true })
+ * Uses Effect.fn("harbor/HubSpotContacts.batchUpsert") for automatic tracing spans.
  */
 import { Effect, Schedule } from "effect"
 import { HubSpotError } from "./errors.js"
@@ -21,16 +18,17 @@ const retrySchedule = Schedule.exponential("200 millis").pipe(
 )
 
 export function HubSpotContactsLive(config: HubSpotConfig): HubSpotContactsImpl {
-  return {
-    batchUpsert: (batch) =>
-      Effect.tryPromise({
-        try: async () => {
-          const inputs = batch.map((c) => ({
-            id:         c.email,
-            idProperty: "email",
-            properties: c as Record<string, unknown>,
-          }))
+  // Effect.fn adds a tracing span — visible as "harbor/HubSpotContacts.batchUpsert" in OTel traces
+  const batchUpsert = Effect.fn("harbor/HubSpotContacts.batchUpsert")(
+    function*(batch: ReadonlyArray<HubSpotContact>) {
+      const inputs = batch.map((c) => ({
+        id:         c.email,
+        idProperty: "email",
+        properties: c as Record<string, unknown>,
+      }))
 
+      const result = yield* Effect.tryPromise({
+        try: async () => {
           const res = await fetch(`${config.baseUrl}/crm/v3/objects/contacts/batch/upsert`, {
             method:  "POST",
             headers: {
@@ -61,15 +59,23 @@ export function HubSpotContactsLive(config: HubSpotConfig): HubSpotContactsImpl 
         }),
       }).pipe(
         Effect.retry({ schedule: retrySchedule, while: (e) => e.retryable })
-      ),
-  }
+      )
+
+      return result
+    }
+  )
+
+  return { batchUpsert }
 }
 
 export function fakeHubSpotContacts(opts: { ok?: number; fail?: boolean } = {}): HubSpotContactsImpl {
   return {
-    batchUpsert: (batch) =>
-      opts.fail
-        ? Effect.fail(new HubSpotError({ cause: new Error("Fake failure"), message: "Fake failure", retryable: false }))
-        : Effect.succeed(opts.ok ?? batch.length),
+    batchUpsert: opts.fail
+      ? Effect.fn("harbor/HubSpotContacts.batchUpsert.fake")(function*(_batch) {
+          return yield* Effect.fail(new HubSpotError({ cause: new Error("Fake failure"), message: "Fake failure", retryable: false }))
+        })
+      : Effect.fn("harbor/HubSpotContacts.batchUpsert.fake")(function*(batch) {
+          return yield* Effect.succeed(opts.ok ?? batch.length)
+        }),
   }
 }
