@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/logo.png" alt="Harbor" width="180" />
+</p>
+
 # Harbor
 
 > Type-safe data pipeline framework — Source → Stage → Destination, powered by Effect
