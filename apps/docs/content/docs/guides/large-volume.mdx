@@ -1,0 +1,82 @@
+---
+title: Large Volume Migrations
+description: Migrate 30M+ records using Stage for resume and GCS for storage
+---
+
+For migrations with more than 50k records, use a Stage between Source and Destination. This decouples extraction from loading — if the load fails halfway, resume from the stage without re-extracting.
+
+## Architecture
+
+```
+Source  →  Stage.write  →  Stage.read  →  Destination
+```
+
+## Step 1: Extract and stage
+
+```typescript
+import { GcsStage }        from "@harbor/stage-gcs"
+import { CsvSource }       from "@harbor/source-csv"
+import { Effect, Stream }  from "effect"
+
+const stage = GcsStage({
+  bucket:    "harbor-migrations",
+  prefix:    "cliente-x/2026-05",
+})
+
+const source = CsvSource({ path: "contacts.jsonl", schema: ContactSchema })
+
+const stageKey = `contacts-${new Date().toISOString().split("T")[0]}`
+
+// Only extract if not already staged
+const staged = await Effect.runPromise(stage.exists(stageKey))
+
+if (!staged) {
+  const { total } = await Effect.runPromise(
+    stage.write(stageKey, source.stream.pipe(Stream.map(JSON.stringify)))
+  )
+  console.log(`Staged ${total} records to GCS`)
+}
+```
+
+## Step 2: Load from stage
+
+```typescript
+import { ContactsDestination } from "@harbor/destination-hubspot"
+
+const dest = ContactsDestination({
+  token:   process.env.HUBSPOT_TOKEN!,
+  baseUrl: "https://api.hubapi.com",
+})
+
+const lineStream = await Effect.runPromise(stage.read(stageKey))
+
+const contactStream = lineStream.pipe(
+  Stream.map((line) => JSON.parse(line) as HubSpotContact)
+)
+
+const result = await Effect.runPromise(dest.write(contactStream))
+console.log(`Done: ${result.ok} ok, ${result.errors} errors`)
+```
+
+## Time estimates for 30M records
+
+| Step | Rate | Time |
+|------|------|------|
+| Extract to GCS | ~50k records/s | ~10 min |
+| HubSpot batch upsert | ~1k records/s (rate limited) | ~8 hours |
+| Total | — | ~8-10 hours |
+
+The HubSpot Import API (`/crm/v3/imports`) supports higher throughput for very large volumes — use it for > 1M records.
+
+## Resume on failure
+
+Because the stage key includes the date, the second run of the same day detects the existing stage and skips extraction:
+
+```
+Run 1: extracts 30M → stages to GCS → starts loading → fails at 15M
+Run 2: GCS key exists → skips extraction → resumes loading from where it left off
+```
+
+<Callout type="warning">
+  The Destination is not aware of how far it loaded on the previous run. For true resume-on-failure, you need to track which records were already sent (e.g., via `legacy_id` in HubSpot).
+</Callout>

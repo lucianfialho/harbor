@@ -1,0 +1,50 @@
+---
+title: Introduction
+description: Type-safe data pipeline framework powered by Effect
+---
+
+Harbor is a TypeScript framework for building data migration pipelines.
+Inspired by [Airbyte](https://airbyte.com) but designed for the [Effect](https://effect.website) ecosystem — every step is typed, composable, and resumable.
+
+Built at [Métricas Boss](https://metricasboss.com.br) for migrating CRM data (ActiveCampaign, RD Station) into HubSpot at scale.
+
+## The pattern
+
+```
+Source  →  [Stage]  →  Destination
+```
+
+| Piece | What it does |
+|-------|-------------|
+| **Source** | Streams records from an external system |
+| **Stage** | Persists records between Extract and Load (optional) |
+| **Destination** | Sends records to the target system |
+
+## Quick example
+
+```typescript
+import { Effect, Stream } from "effect"
+import { CsvSource }           from "@harbor/source-csv"
+import { ContactsDestination } from "@harbor/destination-hubspot"
+
+const program = Effect.gen(function*() {
+  const source = CsvSource({ path: "contacts.csv", schema: ContactSchema })
+  const dest   = ContactsDestination({ token: process.env.HUBSPOT_TOKEN! })
+
+  return yield* dest.write(source.stream.pipe(Stream.map(transform)))
+})
+
+Effect.runPromise(Effect.orDie(program))
+  .then(({ ok, errors }) => console.log(`Done: ${ok} ok, ${errors} errors`))
+```
+
+## Packages
+
+| Package | Status |
+|---------|--------|
+| `@harbor/core` | ✅ Stable |
+| `@harbor/source-csv` | ✅ Stable |
+| `@harbor/source-openapi` | ✅ Stable |
+| `@harbor/stage-local` | ✅ Stable |
+| `@harbor/stage-gcs` | ✅ Stable |
+| `@harbor/destination-hubspot` | ✅ Stable |

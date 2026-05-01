@@ -1,0 +1,91 @@
+---
+title: Stage
+description: Intermediate storage for large-volume migrations
+---
+
+A **Stage** is an intermediate persistent store between Source and Destination. It decouples extraction from loading — extract once, retry the load as many times as needed without hitting the source API again.
+
+## When to use Stage
+
+| Volume | Recommendation |
+|--------|---------------|
+| < 50k records | Skip Stage — pipe Source directly to Destination |
+| > 50k records | Use `stage-local` for dev, `stage-gcs` for production |
+
+## Interface
+
+```typescript
+interface Stage<E = never, R = never> {
+  write(key: string, lines: Stream<string, E, R>): Effect<{ total: number }, E, R>
+  read(key: string):                               Effect<Stream<string, E, R>, E, R>
+  exists(key: string):                             Effect<boolean, E, R>
+}
+```
+
+## `LocalStage`
+
+Stores JSONL on the local filesystem. Best for development.
+
+```typescript
+import { LocalStage } from "@harbor/stage-local"
+
+const stage = LocalStage({ dir: "./harbor-stage" })
+
+// Write
+const { total } = await Effect.runPromise(
+  stage.write("contacts-2026-05", source.stream.pipe(Stream.map(JSON.stringify)))
+)
+
+// Reads back as a stream of JSON strings
+const lineStream = await Effect.runPromise(stage.read("contacts-2026-05"))
+```
+
+Key naming convention: use a date suffix (`contacts-2026-05`) so that daily re-runs resume from the existing stage instead of re-extracting.
+
+## `GcsStage`
+
+Stores JSONL on Google Cloud Storage. Required for 30M+ records.
+
+```typescript
+import { GcsStage } from "@harbor/stage-gcs"
+
+const stage = GcsStage({
+  bucket:    "harbor-migrations",
+  prefix:    "cliente-x/2026-05",
+  projectId: "my-gcp-project",  // optional if ADC configured
+})
+```
+
+Files created:
+- `gs://harbor-migrations/cliente-x/2026-05/{key}/records.jsonl`
+- `gs://harbor-migrations/cliente-x/2026-05/{key}/_manifest.json`
+
+## Append mode
+
+Both stages support append mode — if the key already exists, subsequent writes append to the existing file. The manifest tracks the running total.
+
+```typescript
+// First run: writes 50k records
+await stage.write("contacts", stream1)  // { total: 50000 }
+
+// Second run (same key): appends 20k more
+await stage.write("contacts", stream2)  // { total: 70000 }
+```
+
+## Resume pattern
+
+```typescript
+const key = `contacts-${new Date().toISOString().split("T")[0]}`
+
+const staged = await stage.exists(key)
+
+if (!staged) {
+  // Extract and stage
+  await stage.write(key, source.stream.pipe(Stream.map(JSON.stringify)))
+}
+
+// Load from stage (always re-runnable)
+const lines   = await stage.read(key)
+const records = lines.pipe(Stream.map(line => JSON.parse(line)))
+await dest.write(records)
+```

@@ -1,0 +1,98 @@
+---
+title: Destination
+description: Where records land after transformation
+---
+
+A **Destination** consumes a stream of records and writes them to the target system. It returns an `ImportResult` with counts of successful, failed, and skipped records.
+
+## Interface
+
+```typescript
+interface Destination<A, E = never, R = never> {
+  write(stream: Stream<A, E, R>): Effect<ImportResult, E, R>
+}
+
+interface ImportResult {
+  ok:      number
+  errors:  number
+  skipped: number
+}
+```
+
+## `ContactsDestination`
+
+Sends contacts to HubSpot via the [Batch Upsert API](https://developers.hubspot.com/docs/reference/api/crm/objects/contacts).
+
+```typescript
+import { ContactsDestination } from "@harbor/destination-hubspot"
+
+const dest = ContactsDestination({
+  token:   process.env.HUBSPOT_TOKEN!,
+  baseUrl: "https://api.hubapi.com",
+})
+
+const result = await Effect.runPromise(dest.write(source.stream))
+// { ok: 9842, errors: 3, skipped: 0 }
+```
+
+**Behavior:**
+- Batches 100 records per request (HubSpot limit)
+- UPSERT by email — idempotent, safe to re-run
+- Automatic retry: exponential backoff, capped at 8 attempts
+- `429 Too Many Requests` and network errors are retried
+- `400 Bad Request` is counted as an error (non-retryable)
+- Partial HubSpot failures (`data.errors` in response) are tracked
+
+## Testing without HTTP
+
+```typescript
+import { fakeHubSpotContacts } from "@harbor/destination-hubspot"
+
+// Always succeeds
+const dest = ContactsDestination(
+  { token: "ignored", baseUrl: "ignored" },
+  fakeHubSpotContacts()
+)
+
+// Always fails
+const dest = ContactsDestination(
+  { token: "ignored", baseUrl: "ignored" },
+  fakeHubSpotContacts({ fail: true })
+)
+
+// Succeeds with fixed count
+const dest = ContactsDestination(
+  { token: "ignored", baseUrl: "ignored" },
+  fakeHubSpotContacts({ ok: 42 })
+)
+```
+
+## Writing your own Destination
+
+```typescript
+import type { Destination, ImportResult } from "@harbor/core"
+import { Effect, Stream } from "effect"
+
+function MyDestination(): Destination<MyRecord, MyError> {
+  return {
+    write: (stream) =>
+      Effect.gen(function*() {
+        let ok = 0, errors = 0
+
+        yield* stream.pipe(
+          Stream.grouped(100),
+          Stream.mapEffect((batch) =>
+            sendBatch(batch).pipe(
+              Effect.tap((n) => Effect.sync(() => { ok += n })),
+              Effect.tapError(() => Effect.sync(() => { errors += batch.length })),
+              Effect.orElseSucceed(() => 0)
+            )
+          ),
+          Stream.runDrain
+        )
+
+        return { ok, errors, skipped: 0 } satisfies ImportResult
+      }),
+  }
+}
+```

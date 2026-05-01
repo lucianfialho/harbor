@@ -1,0 +1,67 @@
+---
+title: "@harbor/stage-local"
+description: Local filesystem staging for development and small migrations
+---
+
+## Installation
+
+```bash
+bun add @harbor/stage-local effect
+```
+
+## LocalStage
+
+Stores JSONL on the local filesystem. Best for development and migrations up to ~50k records.
+
+```typescript
+import { LocalStage } from "@harbor/stage-local"
+
+const stage = LocalStage({ dir: "./harbor-stage" })
+```
+
+### Options
+
+| Option | Type | Required | Description |
+|--------|------|----------|-------------|
+| `dir` | `string` | ✓ | Directory where stage files are stored |
+
+### File structure
+
+```
+{dir}/
+└── {key}/
+    ├── records.jsonl       ← JSONL data (append mode)
+    └── _manifest.json      ← { key, total, updatedAt }
+```
+
+## Operations
+
+```typescript
+// Write a stream of JSONL lines
+const { total } = await Effect.runPromise(
+  stage.write("contacts-2026-05", stream)
+)
+
+// Read back as a stream
+const lineStream = await Effect.runPromise(stage.read("contacts-2026-05"))
+
+// Check if key exists
+const exists = await Effect.runPromise(stage.exists("contacts-2026-05"))
+```
+
+### Append mode
+
+Second write to the same key appends to the existing file and updates the manifest:
+
+```typescript
+await stage.write("contacts", streamA)  // { total: 100 }
+await stage.write("contacts", streamB)  // { total: 150 } — appended 50 more
+```
+
+## Gitignore
+
+Add to `.gitignore`:
+
+```
+harbor-stage/
+```

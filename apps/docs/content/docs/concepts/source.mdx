@@ -1,0 +1,110 @@
+---
+title: Source
+description: How Sources work in Harbor
+---
+
+A **Source** produces a lazy stream of records from an external system. It never loads all records into memory — data flows on demand.
+
+## Interface
+
+```typescript
+interface Source<A, E = never, R = never> {
+  readonly stream: Stream.Stream<A, E, R>
+  readonly schema: Schema.Schema<A>
+  readonly count:  Effect.Effect<number, E, R>
+}
+```
+
+| Field | Description |
+|-------|-------------|
+| `stream` | Pull-based stream of records — consumes only what the destination requests |
+| `schema` | Schema used to validate records at ingress. Invalid records are skipped. |
+| `count` | Estimated total record count. Returns `-1` if unknown (e.g., OpenAPI sources). |
+
+## Available sources
+
+### `CsvSource`
+
+Reads a CSV file line by line.
+
+```typescript
+import { CsvSource } from "@harbor/source-csv"
+
+const source = CsvSource({
+  path:   "contacts.csv",
+  schema: ContactSchema,
+})
+```
+
+Optional — inject a fake for testing:
+
+```typescript
+import { fakeCsvFiles } from "@harbor/source-csv"
+
+const source = CsvSource({
+  path:   "ignored.csv",
+  schema: ContactSchema,
+  files:  fakeCsvFiles([{ email: "a@b.com", name: "Ana" }]),
+})
+```
+
+### `JsonLinesSource`
+
+Reads a JSONL file (one JSON object per line). Used for large-volume staging.
+
+```typescript
+import { JsonLinesSource } from "@harbor/source-csv"
+
+const source = JsonLinesSource({ path: "contacts.jsonl", schema: ContactSchema })
+```
+
+### `OpenApiSource`
+
+Turns any OpenAPI 3.x spec into a Source. Auto-detects pagination.
+
+```typescript
+import { OpenApiSource } from "@harbor/source-openapi"
+
+const source = OpenApiSource({
+  spec:    "https://api.mycrm.com/openapi.json",
+  auth:    { type: "bearer", value: token },
+  baseUrl: "https://api.mycrm.com",
+  tag:     "contacts",
+})
+```
+
+Supported pagination strategies: `offset+limit`, `page+page_size`, `cursor`, `next_url`, single request.
+
+### Pre-built connectors
+
+| Package | Wraps |
+|---------|-------|
+| `@harbor/source-activecampaign` | `OpenApiSource` |
+| `@harbor/source-rdstation` | `CsvSource` or `OpenApiSource` |
+
+## Writing your own Source
+
+Implement the `Source<A, E>` interface:
+
+```typescript
+import type { Source } from "@harbor/core"
+import { Effect, Schema, Stream } from "effect"
+
+function MyApiSource(config: { token: string }): Source<MyRecord, MyError> {
+  async function* fetchAll() {
+    let page = 0
+    while (true) {
+      const res = await fetchPage(config.token, page)
+      for (const item of res.items) yield item
+      if (!res.hasMore) break
+      page++
+    }
+  }
+
+  return {
+    stream: Stream.fromAsyncIterable(fetchAll(), (e) => new MyError({ cause: e })),
+    schema: MyRecordSchema,
+    count:  Effect.succeed(-1),
+  }
+}
+```

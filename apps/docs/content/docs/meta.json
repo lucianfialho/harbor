@@ -1,0 +1,21 @@
+{
+  "title": "Harbor",
+  "pages": [
+    "index",
+    "getting-started",
+    "---Concepts---",
+    "concepts/source",
+    "concepts/stage",
+    "concepts/destination",
+    "---Guides---",
+    "guides/testing",
+    "guides/large-volume",
+    "guides/new-connector",
+    "---Packages---",
+    "packages/source-csv",
+    "packages/source-openapi",
+    "packages/stage-local",
+    "packages/stage-gcs",
+    "packages/destination-hubspot"
+  ]
+}

@@ -1,0 +1,103 @@
+---
+title: Testing
+description: Test pipelines without filesystem or HTTP calls
+---
+
+Harbor sources and destinations accept an optional injectable capability parameter. This lets you test the full pipeline with fake data — no disk I/O, no HTTP calls, no `vi.stubGlobal("fetch")`.
+
+## Testing a Source
+
+```typescript
+import { CsvSource, fakeCsvFiles } from "@harbor/source-csv"
+
+it("streams contacts from fake CSV", async () => {
+  const source = CsvSource({
+    path:   "ignored.csv",          // path is ignored when files is provided
+    schema: ContactSchema,
+    files:  fakeCsvFiles([
+      { email: "ana@empresa.com", name: "Ana Silva" },
+      { email: "invalid-email",   name: "Bad" },  // will be skipped
+    ]),
+  })
+
+  const records = await Effect.runPromise(Stream.runCollect(source.stream))
+
+  expect(records).toHaveLength(1)
+  expect(records[0]?.email).toBe("ana@empresa.com")
+})
+```
+
+## Testing a Destination
+
+```typescript
+import { ContactsDestination, fakeHubSpotContacts } from "@harbor/destination-hubspot"
+
+it("counts successful upserts", async () => {
+  const dest = ContactsDestination(
+    { token: "ignored", baseUrl: "ignored" },
+    fakeHubSpotContacts()  // always succeeds, returns batch.length
+  )
+
+  const result = await Effect.runPromise(
+    dest.write(Stream.fromIterable([contact(0), contact(1)]))
+  )
+
+  expect(result.ok).toBe(2)
+  expect(result.errors).toBe(0)
+})
+
+it("counts errors when destination fails", async () => {
+  const dest = ContactsDestination(
+    { token: "ignored", baseUrl: "ignored" },
+    fakeHubSpotContacts({ fail: true })
+  )
+
+  const result = await Effect.runPromise(
+    dest.write(Stream.fromIterable([contact(0)]))
+  )
+
+  expect(result.errors).toBe(1)
+})
+```
+
+## Testing the full pipeline
+
+```typescript
+it("full pipeline: CSV → transform → HubSpot", async () => {
+  let batchesSent = 0
+
+  const source = CsvSource({
+    path:   "ignored.csv",
+    schema: ContactSchema,
+    files:  fakeCsvFiles([
+      { email: "ana@empresa.com", name: "Ana Silva" },
+      { email: "carlos@startup.io", name: "Carlos Mendes" },
+    ]),
+  })
+
+  const dest = ContactsDestination(
+    { token: "ignored", baseUrl: "ignored" },
+    {
+      batchUpsert: (batch) => {
+        batchesSent++
+        return Effect.succeed(batch.length)
+      },
+    }
+  )
+
+  const result = await Effect.runPromise(
+    dest.write(source.stream.pipe(Stream.map(transform)))
+  )
+
+  expect(result.ok).toBe(2)
+  expect(batchesSent).toBe(1)  // fits in one batch
+})
+```
+
+## Why not `vi.stubGlobal("fetch")`?
+
+Global stubs affect all tests in the file and can cause flakiness when tests run in parallel. The injection pattern is:
+
+- **Scoped**: each test provides its own implementation
+- **Explicit**: the types enforce that you provide an implementation
+- **Simpler**: no setup/teardown, no `vi.unstubAllGlobals()`

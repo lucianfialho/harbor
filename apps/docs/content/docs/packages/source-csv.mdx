@@ -1,0 +1,83 @@
+---
+title: "@harbor/source-csv"
+description: CSV and JSONL source connectors
+---
+
+## Installation
+
+```bash
+bun add @harbor/source-csv effect
+```
+
+## CsvSource
+
+Streams a CSV file row by row without loading it into memory.
+
+```typescript
+import { CsvSource } from "@harbor/source-csv"
+
+const source = CsvSource({
+  path:   "contacts.csv",
+  schema: ContactSchema,
+})
+```
+
+### Options
+
+| Option | Type | Required | Description |
+|--------|------|----------|-------------|
+| `path` | `string` | ✓ | Path to the CSV file |
+| `schema` | `Schema<A>` | ✓ | Schema to validate each row |
+| `files` | `CsvFilesImpl` | — | Injectable capability for testing |
+
+### Behavior
+
+- Header row is skipped automatically
+- BOM (byte order mark) handled transparently
+- Rows failing schema validation are **silently skipped** (not errors)
+- Path traversal (`../`) is rejected
+
+## JsonLinesSource
+
+Streams a JSONL file (one JSON object per line).
+
+```typescript
+import { JsonLinesSource } from "@harbor/source-csv"
+
+const source = JsonLinesSource({
+  path:   "contacts.jsonl",
+  schema: ContactSchema,
+})
+```
+
+Same options as `CsvSource`, with `lines` instead of `rows` in the injectable interface.
+
+## Testing
+
+```typescript
+import { fakeCsvFiles, fakeJsonLinesFiles } from "@harbor/source-csv"
+
+// CSV fake
+const source = CsvSource({
+  path:   "ignored.csv",
+  schema: ContactSchema,
+  files:  fakeCsvFiles([{ email: "a@b.com", name: "Ana" }]),
+})
+
+// JSONL fake
+const source = JsonLinesSource({
+  path:   "ignored.jsonl",
+  schema: ContactSchema,
+  files:  fakeJsonLinesFiles(['{"email":"a@b.com","name":"Ana"}']),
+})
+```
+
+## Exports
+
+```typescript
+export { CsvSource, JsonLinesSource }                         from "@harbor/source-csv"
+export { CsvError }                                           from "@harbor/source-csv"
+export { NodeCsvFiles, fakeCsvFiles, type CsvFilesImpl }      from "@harbor/source-csv"
+export { NodeJsonLinesFiles, fakeJsonLinesFiles,
+         type JsonLinesFilesImpl }                            from "@harbor/source-csv"
+```

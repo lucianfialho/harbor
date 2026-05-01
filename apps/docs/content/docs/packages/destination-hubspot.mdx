@@ -1,0 +1,84 @@
+---
+title: "@harbor/destination-hubspot"
+description: HubSpot contacts destination with batch upsert and retry
+---
+
+## Installation
+
+```bash
+bun add @harbor/destination-hubspot effect
+```
+
+## ContactsDestination
+
+Sends contacts to HubSpot via the [Batch Upsert API](https://developers.hubspot.com/docs/reference/api/crm/objects/contacts).
+
+```typescript
+import { ContactsDestination } from "@harbor/destination-hubspot"
+
+const dest = ContactsDestination({
+  token:   process.env.HUBSPOT_TOKEN!,
+  baseUrl: "https://api.hubapi.com",
+})
+```
+
+### Parameters
+
+| Param | Type | Required | Description |
+|-------|------|----------|-------------|
+| `config` | `HubSpotConfig` | ✓ | `{ token, baseUrl }` |
+| `contacts` | `HubSpotContactsImpl` | — | Injectable HTTP capability for testing |
+
+### HubSpotContact
+
+```typescript
+interface HubSpotContact {
+  readonly email:      string       // used as upsert identifier
+  readonly firstname?: string
+  readonly lastname?:  string
+  readonly phone?:     string
+  readonly company?:   string
+  readonly [key: string]: unknown   // any additional HubSpot properties
+}
+```
+
+### Behavior
+
+- Batches **100 records per request** (HubSpot limit)
+- UPSERT by `email` — safe to re-run
+- Retry: exponential backoff, max **8 attempts**, jittered
+- Retryable: `429`, `500`, `502`, `503`, `504`, network errors (`TypeError`)
+- Non-retryable: `400`, `403`, `404` — counted as errors
+- `ImportResult.errors` reflects both batch-level failures and partial HubSpot errors (`data.errors`)
+
+## Testing
+
+```typescript
+import { fakeHubSpotContacts } from "@harbor/destination-hubspot"
+
+// Always succeeds
+fakeHubSpotContacts()
+
+// Always fails (non-retryable)
+fakeHubSpotContacts({ fail: true })
+
+// Succeeds with fixed count
+fakeHubSpotContacts({ ok: 42 })
+
+// Custom implementation
+const dest = ContactsDestination(config, {
+  batchUpsert: (batch) => {
+    callCount++
+    return Effect.succeed(batch.length)
+  },
+})
+```
+
+## Exports
+
+```typescript
+export { ContactsDestination, type HubSpotConfig, type HubSpotContact } from "@harbor/destination-hubspot"
+export { HubSpotError }                                                  from "@harbor/destination-hubspot"
+export { HubSpotContactsLive, fakeHubSpotContacts,
+         type HubSpotContactsImpl }                                      from "@harbor/destination-hubspot"
+```

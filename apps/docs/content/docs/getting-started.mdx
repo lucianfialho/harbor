@@ -1,0 +1,75 @@
+---
+title: Getting Started
+description: Run your first Harbor pipeline in 5 minutes
+---
+
+## Prerequisites
+
+- [Bun](https://bun.sh) 1.2+
+- Node.js 20+
+
+## Clone and run
+
+```bash
+git clone https://github.com/lucianfialho/harbor
+cd harbor && bun install
+
+# Run example 01 — no HubSpot token needed
+cd examples
+bun run 01-csv-to-hubspot/run.ts --dry-run
+```
+
+Output:
+```
+Found 10 contacts in CSV
+  → ana.silva@techcorp.com.br
+  → carlos.mendes@startup.io
+  ...
+Dry-run: would upsert 10 contacts
+Done: ok=0 errors=0
+```
+
+## Add to your project
+
+```bash
+bun add @harbor/source-csv @harbor/destination-hubspot effect
+```
+
+```typescript
+import { Schema } from "effect"
+import { CsvSource }           from "@harbor/source-csv"
+import { ContactsDestination } from "@harbor/destination-hubspot"
+
+const ContactSchema = Schema.Struct({
+  email:   Schema.String,
+  name:    Schema.String,
+  phone:   Schema.optional(Schema.String),
+  company: Schema.optional(Schema.String),
+})
+
+const source = CsvSource({ path: "contacts.csv", schema: ContactSchema })
+
+const dest = ContactsDestination({
+  token:   process.env.HUBSPOT_TOKEN!,
+  baseUrl: "https://api.hubapi.com",
+})
+
+const { ok, errors } = await Effect.runPromise(
+  Effect.orDie(dest.write(source.stream))
+)
+
+console.log(`Done: ${ok} ok, ${errors} errors`)
+```
+
+## What just happened
+
+1. `CsvSource` opens `contacts.csv` and streams it **line by line** — no matter how large the file, memory usage stays constant.
+2. `ContactsDestination` groups records into batches of 100 and upserts to HubSpot via the [Batch API](https://developers.hubspot.com/docs/reference/api/crm/objects/contacts).
+3. If HubSpot returns a `429 Rate Limited`, the retry schedule kicks in automatically.
+4. The result `{ ok, errors, skipped }` tells you exactly how many records succeeded.
+
+## Next steps
+
+- [Core concepts](/docs/concepts/source) — understand Source, Stage, Destination
+- [Testing](/docs/guides/testing) — test without filesystem or HTTP calls
+- [Large volumes](/docs/guides/large-volume) — use Stage for 30M+ records

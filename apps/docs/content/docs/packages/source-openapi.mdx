@@ -1,0 +1,80 @@
+---
+title: "@harbor/source-openapi"
+description: Generic OpenAPI spec → Source connector with auto-pagination
+---
+
+## Installation
+
+```bash
+bun add @harbor/source-openapi yaml effect
+```
+
+## OpenApiSource
+
+Turns any OpenAPI 3.x (or Swagger 2.0) spec into a `Source<Record>`. No per-CRM connector needed.
+
+```typescript
+import { OpenApiSource } from "@harbor/source-openapi"
+
+const source = OpenApiSource({
+  spec:    "https://api.mycrm.com/openapi.json",
+  auth:    { type: "bearer", value: token },
+  baseUrl: "https://api.mycrm.com",
+  tag:     "contacts",
+})
+```
+
+### Options
+
+| Option | Type | Required | Description |
+|--------|------|----------|-------------|
+| `spec` | `string` | ✓ | URL or file path to OpenAPI spec |
+| `auth` | `AuthConfig` | ✓ | Authentication config |
+| `baseUrl` | `string` | ✓ | API base URL |
+| `tag` | `string` | ✓ | OpenAPI tag group (e.g. `"contacts"`) |
+| `pageSize` | `number` | — | Records per page (default: 100) |
+
+### Auth types
+
+```typescript
+{ type: "bearer",  value: "TOKEN" }
+{ type: "apiKey",  headerName: "Api-Token", value: "KEY" }
+{ type: "basic",   value: "user:pass" }
+{ type: "headers", headers: { "X-Custom": "value" } }
+{ type: "none" }
+```
+
+### Auto-detected pagination
+
+| Strategy | Detected when |
+|----------|--------------|
+| `offset + limit` | Spec has `offset` and `limit` query params |
+| `page + page_size` | Spec has `page` and `page_size` (or `per_page`) |
+| `cursor` | Spec has `cursor` or `after` query param |
+| `next_url` | Response schema has `next` or `_links.next` |
+| `single` | No pagination params found |
+
+### discover()
+
+Returns the fields from the response schema:
+
+```typescript
+const fields = await Effect.runPromise(source.discover())
+// [{ name: "id", type: "integer", required: true }, { name: "email", type: "string", required: false }, ...]
+```
+
+## Pre-built connectors
+
+```typescript
+import { ActiveCampaignSource } from "@harbor/source-activecampaign"
+import { RDStationApiSource, RDStationCsvSource } from "@harbor/source-rdstation"
+
+// AC
+const source = ActiveCampaignSource({ account: "minhaempresa", token: "KEY" })
+
+// RD Station — CSV (recommended)
+const source = RDStationCsvSource({ path: "./leads_export.csv" })
+
+// RD Station — API
+const source = RDStationApiSource({ accessToken: "TOKEN", segmentationId: 123 })
+```

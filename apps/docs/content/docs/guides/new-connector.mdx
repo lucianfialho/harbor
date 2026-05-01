@@ -1,0 +1,153 @@
+---
+title: Adding a New Connector
+description: Step-by-step guide to adding a new Source or Destination
+---
+
+## Adding a Source
+
+### 1. Create the package
+
+```bash
+mkdir -p packages/source-mycrm/src/test
+```
+
+`packages/source-mycrm/package.json`:
+
+```json
+{
+  "name": "@harbor/source-mycrm",
+  "type": "module",
+  "exports": { ".": { "import": "./dist/index.js" } },
+  "scripts": { "build": "tsc -p tsconfig.json", "test": "vitest run" },
+  "dependencies": { "@harbor/core": "workspace:*" },
+  "peerDependencies": { "effect": ">=4.0.0-beta" },
+  "devDependencies": { "vitest": "^3.0.0" }
+}
+```
+
+`vitest.config.ts` — **required** to avoid the bun workspace effect version conflict:
+
+```typescript
+import { defineConfig } from "vitest/config"
+import { resolve } from "node:path"
+
+export default defineConfig({
+  resolve: {
+    alias: { "effect": resolve(__dirname, "../../node_modules/effect") },
+    dedupe: ["effect"],
+  },
+})
+```
+
+### 2. Implement the Source
+
+```typescript
+import type { Source } from "@harbor/core"
+import { Effect, Schema, Stream } from "effect"
+import { Schema as S } from "effect"
+
+class MyCrmError extends S.TaggedErrorClass<MyCrmError>()(
+  "harbor/MyCrmError",
+  { cause: S.Defect, message: S.String }
+) {}
+
+const MyCrmRecord = Schema.Struct({
+  id:    Schema.String,
+  email: Schema.String,
+  name:  Schema.String,
+})
+
+type MyCrmRecord = typeof MyCrmRecord.Type
+
+export function MyCrmSource(config: { token: string }): Source<MyCrmRecord, MyCrmError> {
+  async function* fetchAll() {
+    let offset = 0
+    const limit = 100
+    while (true) {
+      const res = await fetch(`https://api.mycrm.com/contacts?offset=${offset}&limit=${limit}`, {
+        headers: { Authorization: `Bearer ${config.token}` },
+      })
+      const data = await res.json() as { items: unknown[]; total: number }
+      for (const item of data.items) yield item
+      offset += data.items.length
+      if (offset >= data.total) break
+    }
+  }
+
+  const decode = Schema.decodeUnknownSync(MyCrmRecord)
+
+  return {
+    stream: Stream.fromAsyncIterable(fetchAll(), (e) => new MyCrmError({ cause: e, message: String(e) })).pipe(
+      Stream.map((row) => { try { return decode(row) } catch { return null } }),
+      Stream.filter((v): v is MyCrmRecord => v !== null)
+    ),
+    schema: MyCrmRecord,
+    count:  Effect.succeed(-1),
+  }
+}
+```
+
+### 3. Write tests with fake HTTP
+
+Use `vi.stubGlobal("fetch", ...)` or the optional `files` pattern:
+
+```typescript
+import { describe, expect, it, vi } from "vitest"
+import { MyCrmSource } from "../index.js"
+import { Effect, Stream } from "effect"
+
+it("streams contacts from mock API", async () => {
+  vi.stubGlobal("fetch", async () =>
+    new Response(JSON.stringify({
+      items: [{ id: "1", email: "a@b.com", name: "Ana" }],
+      total: 1,
+    }), { status: 200, headers: { "Content-Type": "application/json" } })
+  )
+
+  const source  = MyCrmSource({ token: "test" })
+  const records = await Effect.runPromise(Stream.runCollect(source.stream))
+  expect(records).toHaveLength(1)
+  vi.unstubAllGlobals()
+})
+```
+
+### 4. Add to workspaces
+
+In root `package.json`:
+
+```json
+{ "workspaces": ["packages/*", "apps/*"] }
+```
+
+In `turbo.json`, no changes needed — packages are auto-discovered.
+
+## Adding a Destination
+
+Same pattern, but implement `Destination<A, E>`:
+
+```typescript
+import type { Destination, ImportResult } from "@harbor/core"
+import { Effect, Stream } from "effect"
+
+export function MyDestination(config: { apiKey: string }): Destination<MyRecord, MyError> {
+  return {
+    write: (stream) =>
+      Effect.gen(function*() {
+        let ok = 0, errors = 0
+
+        yield* stream.pipe(
+          Stream.grouped(100),
+          Stream.mapEffect((batch) =>
+            Effect.tryPromise({
+              try:   () => sendBatch(config.apiKey, batch).then((n) => { ok += n }),
+              catch: (e) => { errors += batch.length; return new MyError({ cause: e }) },
+            }).pipe(Effect.orElseSucceed(() => 0))
+          ),
+          Stream.runDrain
+        )
+
+        return { ok, errors, skipped: 0 } satisfies ImportResult
+      }),
+  }
+}
+```

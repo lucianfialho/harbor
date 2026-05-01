@@ -1,0 +1,72 @@
+---
+title: "@harbor/stage-gcs"
+description: Google Cloud Storage staging for 30M+ records
+---
+
+## Installation
+
+```bash
+bun add @harbor/stage-gcs @google-cloud/storage effect
+```
+
+## GcsStage
+
+Stores JSONL on Google Cloud Storage. Required for migrations with more than 50k records.
+
+```typescript
+import { GcsStage } from "@harbor/stage-gcs"
+
+const stage = GcsStage({
+  bucket:    "harbor-migrations",
+  prefix:    "cliente-x/2026-05",
+  projectId: "my-gcp-project",  // optional if ADC is configured
+  keyFile:   "/path/to/key.json",  // optional
+})
+```
+
+### Options
+
+| Option | Type | Required | Description |
+|--------|------|----------|-------------|
+| `bucket` | `string` | ✓ | GCS bucket name |
+| `prefix` | `string` | — | Path prefix inside the bucket |
+| `projectId` | `string` | — | GCP project ID |
+| `keyFile` | `string` | — | Service account key file path |
+
+### File structure in GCS
+
+```
+gs://{bucket}/{prefix}/{key}/records.jsonl
+gs://{bucket}/{prefix}/{key}/_manifest.json
+```
+
+## Authentication
+
+The `@google-cloud/storage` client supports multiple auth methods:
+
+```bash
+# Application Default Credentials (recommended)
+gcloud auth application-default login
+
+# Service account key file
+export GOOGLE_APPLICATION_CREDENTIALS=/path/to/key.json
+
+# Or pass keyFile in config
+GcsStage({ bucket: "...", keyFile: "/path/to/key.json" })
+```
+
+## Operations
+
+Same interface as `LocalStage`:
+
+```typescript
+await stage.write(key, lineStream)
+const stream = await stage.read(key)
+const exists = await stage.exists(key)
+```
+
+## Required IAM roles
+
+Assign to the service account running the migration:
+
+- `roles/storage.objectAdmin` on the bucket — for write + read + exists
